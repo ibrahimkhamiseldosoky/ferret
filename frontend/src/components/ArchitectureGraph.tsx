@@ -127,10 +127,10 @@ function layoutNodes(nodes: GraphNode[], edges: GraphEdge[]): GraphNode[] {
 
   const g = new dagre.graphlib.Graph();
   g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: 'TB', nodesep: 60, ranksep: 120, marginx: 40, marginy: 40 });
+  g.setGraph({ rankdir: 'TB', nodesep: 80, ranksep: 80, marginx: 40, marginy: 40 });
 
   for (const n of connected) {
-    const labelWidth = Math.max(120, n.label.length * 8.5 + 24);
+    const labelWidth = Math.min(180, Math.max(120, n.label.length * 8 + 24));
     g.setNode(n.node_id, { width: labelWidth, height: 40 });
   }
   for (const e of localEdges) {
@@ -165,12 +165,12 @@ function layoutNodes(nodes: GraphNode[], edges: GraphEdge[]): GraphNode[] {
     (byTier[t] ??= []).push(n);
   }
 
-  const TIER_GAP = 160;
+  const TIER_GAP = 200;
   const tiersSorted = Object.keys(byTier).map(Number).sort((a, b) => a - b);
   let maxX = 0;
   for (const t of tiersSorted) {
     const group = byTier[t].sort((a, b) => (a.position?.x ?? 0) - (b.position?.x ?? 0));
-    const yPos = t * TIER_GAP + 60;
+    const yPos = t * TIER_GAP + 80;
     for (const n of group) {
       if (n.position) n.position.y = yPos;
       maxX = Math.max(maxX, n.position?.x ?? 0);
@@ -178,10 +178,10 @@ function layoutNodes(nodes: GraphNode[], edges: GraphEdge[]): GraphNode[] {
   }
 
   if (isolated.length > 0) {
-    const sideX = maxX + 300;
+    const sideX = maxX + 350;
     const isoCols = Math.max(1, Math.min(3, Math.floor(isolated.length / 5) + 1));
     isolated.forEach((n, i) => {
-      n.position = { x: sideX + (i % isoCols) * 220, y: Math.floor(i / isoCols) * 80 + 60 };
+      n.position = { x: sideX + (i % isoCols) * 240, y: Math.floor(i / isoCols) * 100 + 80 };
     });
   }
 
