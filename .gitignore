@@ -22,3 +22,7 @@ backend/uploads/*
 
 # Logs
 *.log
+
+# Stale project root files
+backend.log
+backend.err
