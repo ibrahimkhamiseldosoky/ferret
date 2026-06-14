@@ -4,6 +4,7 @@ from app.core.config import settings
 from app.api.repositories import router as repositories_router
 from app.api.analysis import router as analysis_router
 from app.api.questions import router as questions_router
+from app.api.auth import router as auth_router
 
 app = FastAPI(
     title="Ferret API",
@@ -28,6 +29,7 @@ app.add_middleware(
 app.include_router(repositories_router)
 app.include_router(analysis_router)
 app.include_router(questions_router)
+app.include_router(auth_router)
 
 
 @app.get("/api/health")
