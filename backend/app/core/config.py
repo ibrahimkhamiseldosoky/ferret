@@ -19,7 +19,7 @@ class Settings:
     SECRET_KEY: str = os.getenv("SECRET_KEY", "")
     JWT_SECRET: str = os.getenv("JWT_SECRET", "")
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
-    ALLOWED_ORIGINS: str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+    ALLOWED_ORIGINS: str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,https://ferret-pi.vercel.app")
     UPLOAD_DIR: str = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads")
 
 
