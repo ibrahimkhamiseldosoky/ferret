@@ -124,41 +124,18 @@ def build_graph(
 
 
 def _auto_layout(nodes: List[GraphNode]) -> None:
-    TYPE_ORDER = ["api", "service", "database", "event", "file", "external"]
-    SPACING_X = 280
-    SPACING_Y = 160
-    SECTION_GAP_Y = 80
-    COL_PADDING = 40
-    ROW_PADDING = 40
+    dir_groups: dict[str, list[GraphNode]] = {}
+    for node in nodes:
+        data = node.data or {}
+        fp = data.get("filePath", "") or data.get("path", "")
+        parent = str(Path(fp).parent) if fp else ""
+        dir_groups.setdefault(parent, []).append(node)
 
-    def _dir_key(node: GraphNode) -> str:
-        fp = (node.data or {}).get("filePath", "") or (node.data or {}).get("path", "")
-        return str(Path(fp).parent) if fp else ""
-
-    grouped: dict[str, list[GraphNode]] = {}
-    for n in nodes:
-        grouped.setdefault(n.type, []).append(n)
-
-    sorted_types = sorted(grouped.keys(), key=lambda t: TYPE_ORDER.index(t) if t in TYPE_ORDER else len(TYPE_ORDER))
-
-    cur_x = COL_PADDING
-    for t in sorted_types:
-        type_nodes = grouped[t]
-        type_nodes.sort(key=lambda n: (_dir_key(n), n.label))
-
-        dir_groups: dict[str, list[GraphNode]] = {}
-        for n in type_nodes:
-            dir_groups.setdefault(_dir_key(n), []).append(n)
-
-        max_w = 0
-        cur_y = ROW_PADDING
-        for dir_name, dir_nodes in dir_groups.items():
-            for node in dir_nodes:
-                node.position_x = cur_x
-                node.position_y = cur_y
-                cur_y += SPACING_Y
-            cur_y += SECTION_GAP_Y
-
-        type_width = max(len(grp) for grp in dir_groups.values()) if dir_groups else 1
-        max_w = type_width * SPACING_X
-        cur_x += SPACING_X + SECTION_GAP_Y
+    y_offset = 0
+    for dir_path, group in dir_groups.items():
+        x_offset = 0
+        for node in group:
+            node.position_x = x_offset
+            node.position_y = y_offset
+            x_offset += 250
+        y_offset += 200

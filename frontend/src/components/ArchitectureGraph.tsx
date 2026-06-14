@@ -15,7 +15,6 @@ import {
   type Edge as RFEdge,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import dagre from 'dagre';
 import { FileCode, Server, Globe, Database, Zap, Box, Layers } from 'lucide-react';
 import type { GraphNode, GraphEdge } from '@/types';
 import type { HeatMapMode } from '@/lib/graphMetrics';
@@ -93,99 +92,17 @@ interface InnerProps {
   onToggleDir?: (dirId: string) => void;
 }
 
-function layoutNodes(nodes: GraphNode[], edges: GraphEdge[]): GraphNode[] {
-  if (nodes.length === 0) return nodes;
+function layoutNodes(nodes: GraphNode[]): GraphNode[] {
+  const missingPositions = nodes.some((n) => !n.position || (n.position.x === 0 && n.position.y === 0));
+  if (!missingPositions || nodes.length === 0) return nodes;
 
-  const nodeIds = new Set(nodes.map((n) => n.node_id));
-  const localEdges = edges.filter((e) => nodeIds.has(e.source_id) && nodeIds.has(e.target_id));
-
-  const edgeNodeIds = new Set<string>();
-  for (const e of localEdges) { edgeNodeIds.add(e.source_id); edgeNodeIds.add(e.target_id); }
-
-  const isolated = nodes.filter((n) => !edgeNodeIds.has(n.node_id));
-  const connected = nodes.filter((n) => edgeNodeIds.has(n.node_id));
-
-  if (connected.length === 0) {
-    return nodes.map((n, i) => ({ ...n, position: { x: (i % 6) * 250 + 40, y: Math.floor(i / 6) * 180 + 40 } }));
-  }
-
-  const indeg = new Map<string, number>();
-  for (const n of connected) { indeg.set(n.node_id, 0); }
-  for (const e of localEdges) {
-    indeg.set(e.target_id, (indeg.get(e.target_id) ?? 0) + 1);
-  }
-
-  const TIER = { top: 0, upper: 1, middle: 2, lower: 3, bottom: 4 };
-  function getTier(n: GraphNode): number {
-    const t = (n.type ?? 'file').toLowerCase();
-    if (t === 'service' && (indeg.get(n.node_id) ?? 0) === 0) return TIER.top;
-    if (t === 'api') return TIER.upper;
-    if (t === 'event') return TIER.lower;
-    if (t === 'database' || t === 'external') return TIER.bottom;
-    return TIER.middle;
-  }
-
-  const g = new dagre.graphlib.Graph();
-  g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: 'TB', nodesep: 80, ranksep: 80, marginx: 40, marginy: 40 });
-
-  for (const n of connected) {
-    const labelWidth = Math.min(180, Math.max(120, n.label.length * 8 + 24));
-    g.setNode(n.node_id, { width: labelWidth, height: 40 });
-  }
-  for (const e of localEdges) {
-    g.setEdge(e.source_id, e.target_id);
-  }
-
-  const tiers: Record<number, GraphNode[]> = {};
-  for (const n of connected) {
-    const t = getTier(n);
-    (tiers[t] ??= []).push(n);
-  }
-
-  for (let t = 0; t < 4; t++) {
-    const from = tiers[t];
-    const to = tiers[t + 1];
-    if (from && to && from.length > 0 && to.length > 0) {
-      g.setEdge(from[0].node_id, to[0].node_id, { weight: 0, minLen: 1 });
-    }
-  }
-
-  dagre.layout(g);
-
-  for (const n of connected) {
-    const dn = g.node(n.node_id);
-    if (!dn) continue;
-    n.position = { x: dn.x, y: dn.y };
-  }
-
-  const byTier: Record<number, GraphNode[]> = {};
-  for (const n of connected) {
-    const t = getTier(n);
-    (byTier[t] ??= []).push(n);
-  }
-
-  const TIER_GAP = 200;
-  const tiersSorted = Object.keys(byTier).map(Number).sort((a, b) => a - b);
-  let maxX = 0;
-  for (const t of tiersSorted) {
-    const group = byTier[t].sort((a, b) => (a.position?.x ?? 0) - (b.position?.x ?? 0));
-    const yPos = t * TIER_GAP + 80;
-    for (const n of group) {
-      if (n.position) n.position.y = yPos;
-      maxX = Math.max(maxX, n.position?.x ?? 0);
-    }
-  }
-
-  if (isolated.length > 0) {
-    const sideX = maxX + 350;
-    const isoCols = Math.max(1, Math.min(3, Math.floor(isolated.length / 5) + 1));
-    isolated.forEach((n, i) => {
-      n.position = { x: sideX + (i % isoCols) * 240, y: Math.floor(i / isoCols) * 100 + 80 };
-    });
-  }
-
-  return nodes;
+  const cols = 6;
+  return nodes.map((n, i) => ({
+    ...n,
+    position: n.position?.x != null && n.position?.y != null && (n.position.x !== 0 || n.position.y !== 0)
+      ? n.position
+      : { x: (i % cols) * 280 + 40, y: Math.floor(i / cols) * 180 + 40 },
+  }));
 }
 
 function GraphInner({
@@ -273,7 +190,7 @@ function GraphInner({
   }, [focusedNodeId, edges]);
 
   const flowNodes = useMemo(() => {
-    const laidOut = layoutNodes(nodes, edges);
+    const laidOut = layoutNodes(nodes);
     const revealCount = Math.ceil(laidOut.length * revealProgress);
     return laidOut.slice(0, revealCount).map((n, idx) => {
       if ((n.type as string) === 'directory') {
