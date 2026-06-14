@@ -124,18 +124,7 @@ def build_graph(
 
 
 def _auto_layout(nodes: List[GraphNode]) -> None:
-    dir_groups: dict[str, list[GraphNode]] = {}
-    for node in nodes:
-        data = node.data or {}
-        fp = data.get("filePath", "") or data.get("path", "")
-        parent = str(Path(fp).parent) if fp else ""
-        dir_groups.setdefault(parent, []).append(node)
-
-    y_offset = 0
-    for dir_path, group in dir_groups.items():
-        x_offset = 0
-        for node in group:
-            node.position_x = x_offset
-            node.position_y = y_offset
-            x_offset += 250
-        y_offset += 200
+    cols = 6
+    for i, node in enumerate(nodes):
+        node.position_x = (i % cols) * 280 + 40
+        node.position_y = (i // cols) * 180 + 40
