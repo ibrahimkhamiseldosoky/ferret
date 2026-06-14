@@ -17,6 +17,7 @@ class Settings:
     GITHUB_CLIENT_ID: str = os.getenv("GITHUB_CLIENT_ID", "")
     GITHUB_CLIENT_SECRET: str = os.getenv("GITHUB_CLIENT_SECRET", "")
     SECRET_KEY: str = os.getenv("SECRET_KEY", "")
+    JWT_SECRET: str = os.getenv("JWT_SECRET", "")
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     ALLOWED_ORIGINS: str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
     UPLOAD_DIR: str = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads")
