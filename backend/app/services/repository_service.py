@@ -3,9 +3,11 @@ from typing import Optional
 from app.core.database import get_supabase
 
 
-def create_repository(name: str, file_count: int, language: Optional[str] = None) -> str:
+def create_repository(name: str, file_count: int, language: Optional[str] = None, user_id: Optional[str] = None) -> str:
     supabase = get_supabase()
     data = {"name": name, "file_count": file_count, "language": language}
+    if user_id:
+        data["user_id"] = user_id
     result = supabase.table("repositories").insert(data).execute()
     if result.data:
         return result.data[0]["id"]
@@ -20,9 +22,20 @@ def get_repository(repository_id: str) -> Optional[dict]:
     return None
 
 
-def list_repositories() -> list[dict]:
+def get_user_repository(repository_id: str, user_id: str) -> Optional[dict]:
     supabase = get_supabase()
-    result = supabase.table("repositories").select("*").order("created_at", desc=True).execute()
+    result = supabase.table("repositories").select("*").eq("id", repository_id).eq("user_id", user_id).execute()
+    if result.data:
+        return result.data[0]
+    return None
+
+
+def list_repositories(user_id: Optional[str] = None) -> list[dict]:
+    supabase = get_supabase()
+    query = supabase.table("repositories").select("*")
+    if user_id:
+        query = query.eq("user_id", user_id)
+    result = query.order("created_at", desc=True).execute()
     return result.data or []
 
 

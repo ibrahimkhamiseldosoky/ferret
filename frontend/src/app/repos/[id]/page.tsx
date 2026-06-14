@@ -154,19 +154,7 @@ export default function RepoPage() {
     };
   }, [id, loadGraph]);
 
-  useEffect(() => {
-    if (!graphData || loading) return;
-    const dismissed = sessionStorage.getItem(`ferret-onboarding-${id}`);
-    if (dismissed) return;
-
-    setOnboardingLoading(true);
-    getOnboarding(id)
-      .then((data) => {
-        setOnboardingData(data);
-        setOnboardingLoading(false);
-      })
-      .catch(() => setOnboardingLoading(false));
-  }, [graphData, loading, id]);
+  
 
   const navigateToNode = useCallback(
     (nodeId: string) => {

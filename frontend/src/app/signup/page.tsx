@@ -17,7 +17,6 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [betaFull, setBetaFull] = useState(false);
   const [waitlistDone, setWaitlistDone] = useState(false);
-  const [rewardKey, setRewardKey] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -60,8 +60,12 @@ export async function getRepositoryGraph(id: string): Promise<{ nodes: GraphNode
 export async function uploadRepository(file: File): Promise<Repository> {
   const form = new FormData();
   form.append('file', file);
+  const headers: Record<string, string> = {};
+  const auth = getAuthHeaders()['Authorization'];
+  if (auth) headers['Authorization'] = auth;
   const res = await fetch(`${API_BASE}/api/repositories/upload`, {
     method: 'POST',
+    headers,
     body: form,
   });
   if (!res.ok) {

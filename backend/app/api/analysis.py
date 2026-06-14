@@ -1,12 +1,33 @@
 from fastapi import APIRouter, HTTPException, Depends
 from app.core.deps import get_current_user
 from app.core.database import get_supabase
+from app.services.repository_service import get_user_repository
+from app.services.analysis_service import get_analysis_state
+from app.models.repository import AnalysisStatusResponse
 
 router = APIRouter(prefix="/api/repositories", tags=["analysis"])
 
 
+@router.get("/{repository_id}/status", response_model=AnalysisStatusResponse)
+async def get_analysis_status(repository_id: str, user: dict = Depends(get_current_user)):
+    repo = get_user_repository(repository_id, user["id"])
+    if not repo:
+        raise HTTPException(status_code=404, detail="Repository not found")
+    state = get_analysis_state(repository_id)
+    return AnalysisStatusResponse(
+        id=repository_id,
+        status=repo["status"],
+        progress=state.get("progress", 0.0),
+        step=state.get("step", 0),
+        stats=state.get("stats", {"files_found": 0, "languages": {}, "nodes_built": 0}),
+    )
+
+
 @router.get("/{repository_id}/graph")
 async def get_repository_graph(repository_id: str, user: dict = Depends(get_current_user)):
+    repo = get_user_repository(repository_id, user["id"])
+    if not repo:
+        raise HTTPException(status_code=404, detail="Repository not found")
     supabase = get_supabase()
     nodes_result = (
         supabase.table("nodes")
@@ -55,6 +76,9 @@ async def get_repository_graph(repository_id: str, user: dict = Depends(get_curr
 
 @router.get("/{repository_id}/files")
 async def get_repository_files(repository_id: str, user: dict = Depends(get_current_user)):
+    repo = get_user_repository(repository_id, user["id"])
+    if not repo:
+        raise HTTPException(status_code=404, detail="Repository not found")
     supabase = get_supabase()
     nodes_result = (
         supabase.table("nodes")

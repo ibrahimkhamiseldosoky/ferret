@@ -151,7 +151,6 @@ def _run_analysis(repository_id: str, extract_dir: str) -> None:
 
         cache.invalidate_repo(repository_id)
 
-    except Exception as e:
+    except Exception:
         update_status(repository_id, "failed")
         cache.invalidate_repo(repository_id)
-        raise e
