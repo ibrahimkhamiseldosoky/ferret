@@ -77,9 +77,23 @@ After uploading, Ferret shows step-by-step progress: detecting languages → bui
 ## Tech Stack
 
 - **Frontend:** Next.js (App Router), TypeScript, Tailwind v4, React Flow, lucide-react, dagre, react-markdown
-- **Backend:** Python FastAPI, Supabase (PostgreSQL), OpenRouter/OpenAI
+- **Backend:** Python FastAPI, Supabase (PostgreSQL), OpenRouter/OpenAI, JWT (python-jose), bcrypt (passlib)
 - **Parsers:** Python `ast` module, regex-based JS/TS parsing
 - **Storage:** Supabase PostgreSQL (`repositories`, `nodes`, `edges`, `onboarding_guides` tables)
+
+### Authentication (Beta)
+
+Ferret uses email/password authentication for beta access, limited to 20 test users.
+
+**Flow:**
+1. User signs up at `/signup` — backend checks user count (< 20), creates account with bcrypt-hashed password
+2. On success, user receives a JWT (7-day expiry) and a unique reward key for full-release benefits
+3. All API routes (except auth endpoints) require `Authorization: Bearer <token>` header
+4. When the 20-user cap is reached, signup shows a waitlist form collecting emails in a `waitlist` table
+
+**Reward keys** — each user gets a UUID at signup stored in `users.reward_key`. Displayed in the dashboard with a copy button. For use at full release.
+
+**Frontend auth** — `AuthContext` provider in `src/lib/auth.tsx` manages token + user state. Protected pages redirect to `/login` if no valid token.
 
 ## Backend Architecture
 
@@ -162,6 +176,32 @@ cd frontend && npx next dev -p 3000
 ```
 
 5. Open `http://localhost:3000`, upload a ZIP, and explore.
+
+## Deployment
+
+### Frontend → Vercel
+1. Push this repo to GitHub
+2. Create a new project in Vercel, import the GitHub repo
+3. Set root directory to `frontend/`
+4. Add environment variable: `NEXT_PUBLIC_API_URL=https://your-railway-url.com`
+5. Deploy — auto-deploys on every push to main
+
+### Backend → Railway
+1. Create a new project in Railway, point it at the same GitHub repo
+2. Set root directory to `backend/`
+3. Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+4. Add environment variables:
+   - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
+   - `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `LLM_MODEL`
+   - `JWT_SECRET` (generate a random string)
+   - `ALLOWED_ORIGINS=https://your-vercel-app.vercel.app`
+   - `ENVIRONMENT=production`
+
+### Supabase
+Run each migration SQL file against your Supabase project in order:
+- `backend/migrations/001_create_tables.sql`
+- `backend/migrations/004_onboarding_guides.sql`
+- `backend/migrations/005_auth.sql`
 
 ## Project Structure
 
