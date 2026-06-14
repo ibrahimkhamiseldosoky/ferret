@@ -15,6 +15,7 @@ import {
   type Edge as RFEdge,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import dagre from 'dagre';
 import { FileCode, Server, Globe, Database, Zap, Box, Layers } from 'lucide-react';
 import type { GraphNode, GraphEdge } from '@/types';
 import type { HeatMapMode } from '@/lib/graphMetrics';
@@ -90,6 +91,30 @@ interface InnerProps {
   onAiReset?: () => void;
   onHeatMapModeChange?: (mode: HeatMapMode) => void;
   onToggleDir?: (dirId: string) => void;
+}
+
+function layoutNodes(nodes: GraphNode[], edges: GraphEdge[]): GraphNode[] {
+  const allAtOrigin = nodes.every((n) => (n.position?.x ?? 0) === 0 && (n.position?.y ?? 0) === 0);
+  if (!allAtOrigin || nodes.length === 0) return nodes;
+
+  const g = new dagre.graphlib.Graph();
+  g.setDefaultEdgeLabel(() => ({}));
+  g.setGraph({ rankdir: 'LR', nodesep: 60, ranksep: 100, marginx: 40, marginy: 40 });
+
+  for (const n of nodes) {
+    const labelWidth = Math.max(110, n.label.length * 8.5 + 24);
+    g.setNode(n.node_id, { width: labelWidth, height: 36 });
+  }
+  for (const e of edges) {
+    g.setEdge(e.source_id, e.target_id);
+  }
+  dagre.layout(g);
+
+  return nodes.map((n) => {
+    const dagreNode = g.node(n.node_id);
+    if (!dagreNode) return n;
+    return { ...n, position: { x: dagreNode.x - 55, y: dagreNode.y - 18 } };
+  });
 }
 
 function GraphInner({
@@ -177,8 +202,9 @@ function GraphInner({
   }, [focusedNodeId, edges]);
 
   const flowNodes = useMemo(() => {
-    const revealCount = Math.ceil(nodes.length * revealProgress);
-    return nodes.slice(0, revealCount).map((n, idx) => {
+    const laidOut = layoutNodes(nodes, edges);
+    const revealCount = Math.ceil(laidOut.length * revealProgress);
+    return laidOut.slice(0, revealCount).map((n, idx) => {
       if ((n.type as string) === 'directory') {
         return {
           id: n.node_id,
@@ -216,7 +242,7 @@ function GraphInner({
         },
       };
     });
-  }, [nodes, dimmedNodeIds, heatMapMode, metrics, heatNorm, pulsingSet, selectedNodeId, connectionIds, revealProgress, collapsedDirs, onToggleDir, focusedNeighborIds]);
+  }, [nodes, edges, dimmedNodeIds, heatMapMode, metrics, heatNorm, pulsingSet, selectedNodeId, connectionIds, revealProgress, collapsedDirs, onToggleDir, focusedNeighborIds]);
 
   const flowEdges: RFEdge[] = useMemo(
     () =>
