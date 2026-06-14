@@ -3,11 +3,13 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Upload, FolderCode, Clock, AlertCircle, Loader2 } from 'lucide-react';
+import { Upload, FolderCode, Clock, AlertCircle, Loader2, LogOut, Key } from 'lucide-react';
+import { useAuth } from '@/lib/auth';
 import { listRepositories, uploadRepository } from '@/lib/api';
 import type { Repository } from '@/types';
 
 export default function DashboardPage() {
+  const { user, logout, loading: authLoading } = useAuth();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [repos, setRepos] = useState<Repository[]>([]);
@@ -21,6 +23,15 @@ export default function DashboardPage() {
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load repositories'))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
+
+  if (authLoading) return null;
+  if (!user) return null;
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -53,21 +64,47 @@ export default function DashboardPage() {
           <span className="text-zinc-300">/</span>
           <span className="text-zinc-600 font-medium text-sm">Repositories</span>
         </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".zip"
-          className="hidden"
-          onChange={handleFileChange}
-        />
-        <button
-          onClick={handleUploadClick}
-          disabled={uploading}
-          className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-indigo-600 text-white font-medium text-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-        >
-          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-          {uploading ? 'Uploading...' : 'Upload Repository'}
-        </button>
+        <div className="flex items-center gap-4">
+          <div className="text-xs text-zinc-500">
+            <span className="text-zinc-400">{user.email}</span>
+          </div>
+          <button
+            onClick={() => {
+              const key = user.reward_key;
+              if (key) {
+                navigator.clipboard.writeText(key);
+                alert('Reward key copied! Save this for full release.');
+              }
+            }}
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-zinc-200 text-xs text-zinc-600 hover:bg-zinc-50 transition-colors"
+            title="Beta reward key"
+          >
+            <Key className="w-3.5 h-3.5" />
+            Reward Key
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".zip"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          <button
+            onClick={handleUploadClick}
+            disabled={uploading}
+            className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-indigo-600 text-white font-medium text-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          >
+            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            {uploading ? 'Uploading...' : 'Upload Repository'}
+          </button>
+          <button
+            onClick={logout}
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-zinc-200 text-xs text-zinc-600 hover:bg-zinc-50 transition-colors"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Sign out
+          </button>
+        </div>
       </header>
 
       <main className="flex-1 p-8 max-w-5xl mx-auto w-full">
