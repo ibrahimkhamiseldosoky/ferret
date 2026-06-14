@@ -1,6 +1,6 @@
 import type { Repository, GraphNode, GraphEdge, FileItem, QuestionResponse, OnboardingData, AnalysisStatus, ImpactResult, SymbolResponse, CallChainResponse, GraphAction, SubGraphRequest } from '@/types';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE = 'https://ferret-production-fd00.up.railway.app';
 
 function getAuthHeaders(): Record<string, string> {
   if (typeof window !== 'undefined') {
