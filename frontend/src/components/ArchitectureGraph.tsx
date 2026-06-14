@@ -204,7 +204,7 @@ function GraphInner({
       return {
         id: n.node_id,
         type: 'custom' as const,
-        position: n.position || { x: (idx % 5) * 240 + 40, y: Math.floor(idx / 5) * 160 + 40 },
+        position: n.position?.x != null ? n.position : { x: (idx % 5) * 240 + 40, y: Math.floor(idx / 5) * 160 + 40 },
         data: {
           label: n.label,
           nodeType: n.type,
@@ -255,11 +255,11 @@ function GraphInner({
   );
 
   useEffect(() => {
-    if (revealProgress >= 1 && nodes.length > 0) {
-      const t = setTimeout(() => fitView({ padding: 0.15, duration: 400 }), 100);
+    if (nodes.length > 0) {
+      const t = setTimeout(() => fitView({ padding: 0.15, duration: 400 }), 200);
       return () => clearTimeout(t);
     }
-  }, [revealProgress, nodes.length, fitView]);
+  }, [nodes.length, fitView]);
 
   const heatModes: { mode: HeatMapMode; label: string }[] = [
     { mode: 'none', label: 'Off' },
