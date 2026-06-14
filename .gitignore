@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.venv/
+venv/
+.env.txt
+
+# Node
+node_modules/
+.next/
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.superpowers/
+
+# Backend uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Logs
+*.log

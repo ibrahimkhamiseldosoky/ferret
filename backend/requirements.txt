@@ -1,0 +1,8 @@
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+python-multipart==0.0.20
+supabase==2.31.0
+openai==1.80.0
+python-dotenv==1.1.0
+pyyaml==6.0.2
+tree-sitter==0.24.1
