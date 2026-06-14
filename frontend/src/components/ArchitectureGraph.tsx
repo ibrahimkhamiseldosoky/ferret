@@ -94,8 +94,13 @@ interface InnerProps {
 }
 
 function layoutNodes(nodes: GraphNode[], edges: GraphEdge[]): GraphNode[] {
-  const allAtOrigin = nodes.every((n) => (n.position?.x ?? 0) === 0 && (n.position?.y ?? 0) === 0);
-  if (!allAtOrigin || nodes.length === 0) return nodes;
+  if (nodes.length === 0) return nodes;
+  const positions = nodes.map((n) => n.position).filter(Boolean) as { x: number; y: number }[];
+  if (positions.length > 0) {
+    const sameRow = positions.every((p) => Math.abs(p.y - positions[0].y) < 50);
+    const sameCol = positions.every((p) => Math.abs(p.x - positions[0].x) < 50);
+    if (!sameRow && !sameCol) return nodes;
+  }
 
   const g = new dagre.graphlib.Graph();
   g.setDefaultEdgeLabel(() => ({}));
