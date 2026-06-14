@@ -3,7 +3,7 @@ import tempfile
 import zipfile
 import shutil
 from pathlib import Path
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from typing import List
 from app.models.repository import (
     RepositoryResponse,
@@ -25,6 +25,7 @@ from app.services.impact_service import analyze_impact
 from app.services.symbol_service import get_symbols, get_call_chain
 from app.services.subgraph_service import extract_subgraph
 from app.services.cache import cache
+from app.core.deps import get_current_user
 from app.services.semantic_queries import (
     find_entrypoints,
     find_unused_nodes,
@@ -38,7 +39,7 @@ router = APIRouter(prefix="/api/repositories", tags=["repositories"])
 
 
 @router.post("/upload", response_model=RepositoryResponse)
-async def upload_repository(file: UploadFile = File(...)):
+async def upload_repository(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
     if not file.filename or not file.filename.endswith(".zip"):
         raise HTTPException(status_code=400, detail="Only ZIP files are accepted")
 
@@ -90,7 +91,7 @@ def _db_error(e: Exception) -> str:
 
 
 @router.get("", response_model=List[RepositoryResponse])
-async def list_all_repositories():
+async def list_all_repositories(user: dict = Depends(get_current_user)):
     try:
         repos = list_repositories()
         return [RepositoryResponse(**r) for r in repos]
@@ -99,7 +100,7 @@ async def list_all_repositories():
 
 
 @router.get("/{repository_id}", response_model=RepositoryResponse)
-async def get_repository_by_id(repository_id: str):
+async def get_repository_by_id(repository_id: str, user: dict = Depends(get_current_user)):
     try:
         repo = get_repository(repository_id)
         if not repo:
@@ -112,7 +113,7 @@ async def get_repository_by_id(repository_id: str):
 
 
 @router.post("/{repository_id}/invalidate-cache")
-async def invalidate_repo_cache(repository_id: str):
+async def invalidate_repo_cache(repository_id: str, user: dict = Depends(get_current_user)):
     try:
         cache.invalidate_repo(repository_id)
         return {"detail": "Cache invalidated"}
@@ -121,7 +122,7 @@ async def invalidate_repo_cache(repository_id: str):
 
 
 @router.post("/{repository_id}/subgraph")
-async def get_subgraph(repository_id: str, body: SubGraphRequest):
+async def get_subgraph(repository_id: str, body: SubGraphRequest, user: dict = Depends(get_current_user)):
     try:
         repo = get_repository(repository_id)
         if not repo:
@@ -142,7 +143,7 @@ async def get_subgraph(repository_id: str, body: SubGraphRequest):
 
 
 @router.post("/{repository_id}/impact/{node_id}")
-async def get_impact_analysis(repository_id: str, node_id: str):
+async def get_impact_analysis(repository_id: str, node_id: str, user: dict = Depends(get_current_user)):
     try:
         repo = get_repository(repository_id)
         if not repo:
@@ -158,7 +159,7 @@ async def get_impact_analysis(repository_id: str, node_id: str):
 
 
 @router.post("/{repository_id}/onboarding")
-async def get_onboarding(repository_id: str):
+async def get_onboarding(repository_id: str, user: dict = Depends(get_current_user)):
     try:
         repo = get_repository(repository_id)
         if not repo:
@@ -172,7 +173,7 @@ async def get_onboarding(repository_id: str):
 
 
 @router.delete("/{repository_id}")
-async def delete_repository_by_id(repository_id: str):
+async def delete_repository_by_id(repository_id: str, user: dict = Depends(get_current_user)):
     try:
         repo = get_repository(repository_id)
         if not repo:

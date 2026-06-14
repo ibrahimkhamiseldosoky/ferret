@@ -1,11 +1,12 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from app.core.deps import get_current_user
 from app.core.database import get_supabase
 
 router = APIRouter(prefix="/api/repositories", tags=["analysis"])
 
 
 @router.get("/{repository_id}/graph")
-async def get_repository_graph(repository_id: str):
+async def get_repository_graph(repository_id: str, user: dict = Depends(get_current_user)):
     supabase = get_supabase()
     nodes_result = (
         supabase.table("nodes")
@@ -53,7 +54,7 @@ async def get_repository_graph(repository_id: str):
 
 
 @router.get("/{repository_id}/files")
-async def get_repository_files(repository_id: str):
+async def get_repository_files(repository_id: str, user: dict = Depends(get_current_user)):
     supabase = get_supabase()
     nodes_result = (
         supabase.table("nodes")
