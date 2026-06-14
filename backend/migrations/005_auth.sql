@@ -1,17 +1,21 @@
 -- Migration 005: Auth tables for beta test users
 
-CREATE TABLE IF NOT EXISTS users (
+-- Drop existing tables to ensure clean schema
+DROP TABLE IF EXISTS waitlist;
+DROP TABLE IF EXISTS users;
+
+CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     reward_key UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS waitlist (
+CREATE TABLE waitlist (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email TEXT UNIQUE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT now()
 );
 
 -- Index for fast email lookups
