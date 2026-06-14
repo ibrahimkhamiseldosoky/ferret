@@ -38,6 +38,12 @@ export default function Home() {
           </div>
           <span className="font-semibold text-zinc-900">Ferret</span>
         </div>
+        <Link
+          href="/login"
+          className="ml-auto h-8 px-4 rounded-lg border border-zinc-300 text-zinc-700 text-sm font-medium hover:bg-zinc-50 transition-colors inline-flex items-center"
+        >
+          Sign in
+        </Link>
       </header>
       <main className="flex-1 flex flex-col items-center justify-center px-6 py-24">
         <div className="max-w-2xl mx-auto text-center">
