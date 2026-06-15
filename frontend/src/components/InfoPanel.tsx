@@ -113,7 +113,7 @@ export default function InfoPanel({ node, nodes, edges, repositoryId, onClose, o
   }, [selectedFn, symbols]);
 
   return (
-    <aside className="fixed right-0 top-0 bottom-0 w-72 border-l border-zinc-200 bg-white/95 backdrop-blur-sm flex flex-col z-10 shadow-xl">
+    <aside className="fixed right-0 top-0 bottom-0 w-72 max-w-[85vw] border-l border-zinc-200 bg-white/95 backdrop-blur-sm flex flex-col z-10 shadow-xl">
       <div className="flex items-center justify-between p-4 border-b border-zinc-200">
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-2 h-2 rounded-full shrink-0" style={{ background: TYPE_COLORS[node.type] || '#a1a1aa' }} />

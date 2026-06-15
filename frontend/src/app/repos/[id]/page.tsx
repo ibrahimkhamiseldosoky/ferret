@@ -530,28 +530,30 @@ export default function RepoPage() {
           />
         </div>
         <div className="flex-1 relative bg-zinc-900/30">
-          <button
-            onClick={() => setSidebarOpen((o) => !o)}
-            className="absolute top-3 left-3 z-10 flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white/90 border border-zinc-200 text-xs text-zinc-600 shadow-sm hover:bg-zinc-50 transition-colors backdrop-blur-sm lg:hidden"
-          >
-            <Menu className="w-3.5 h-3.5" />
-            {sidebarOpen ? 'Close' : 'Menu'}
-          </button>
-          <button
-            onClick={() => {
-              if (onboardingData) {
-                sessionStorage.setItem(`ferret-onboarding-${id}`, '1');
-                setOnboardingData(null);
-              } else {
-                handleOpenOnboarding();
-              }
-            }}
-            disabled={onboardingLoading}
-            className="absolute top-3 left-20 z-10 flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white/90 border border-zinc-200 text-xs text-zinc-600 shadow-sm hover:bg-zinc-50 disabled:opacity-50 transition-colors backdrop-blur-sm"
-          >
-            <BookOpen className="w-3.5 h-3.5" />
-            {onboardingData ? 'Close Guide' : 'New Dev Mode'}
-          </button>
+          <div className="absolute top-3 left-3 right-3 z-10 flex items-start gap-2 flex-wrap pointer-events-none">
+            <button
+              onClick={() => setSidebarOpen((o) => !o)}
+              className="pointer-events-auto flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white/90 border border-zinc-200 text-xs text-zinc-600 shadow-sm hover:bg-zinc-50 transition-colors backdrop-blur-sm lg:hidden"
+            >
+              <Menu className="w-3.5 h-3.5" />
+              {sidebarOpen ? 'Close' : 'Menu'}
+            </button>
+            <button
+              onClick={() => {
+                if (onboardingData) {
+                  sessionStorage.setItem(`ferret-onboarding-${id}`, '1');
+                  setOnboardingData(null);
+                } else {
+                  handleOpenOnboarding();
+                }
+              }}
+              disabled={onboardingLoading}
+              className="pointer-events-auto flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white/90 border border-zinc-200 text-xs text-zinc-600 shadow-sm hover:bg-zinc-50 disabled:opacity-50 transition-colors backdrop-blur-sm"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              {onboardingData ? 'Close Guide' : 'New Dev Mode'}
+            </button>
+          </div>
           <GraphControls
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}

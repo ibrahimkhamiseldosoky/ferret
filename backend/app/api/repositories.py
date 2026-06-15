@@ -149,7 +149,7 @@ async def get_subgraph(repository_id: str, body: SubGraphRequest, user: dict = D
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/{repository_id}/impact/{node_id}")
+@router.post("/{repository_id}/impact/{node_id:path}")
 async def get_impact_analysis(repository_id: str, node_id: str, user: dict = Depends(get_current_user)):
     try:
         repo = _verify_ownership(get_repository(repository_id), user["id"])
