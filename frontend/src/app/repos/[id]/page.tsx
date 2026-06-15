@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams } from 'next/navigation';
-import { BookOpen, Search } from 'lucide-react';
+import { BookOpen, Search, Menu } from 'lucide-react';
 import { getRepositoryGraph, getRepository, getRepositoryStatus, askQuestion, getOnboarding, getImpactAnalysis } from '@/lib/api';
 import type { GraphNode, GraphEdge, QAItem, GraphAction, SubGraph, OnboardingData, ImpactResult } from '@/types';
 import type { HeatMapMode } from '@/lib/graphMetrics';
@@ -71,6 +71,7 @@ export default function RepoPage() {
   const [revealProgress, setRevealProgress] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<NodeTypeFilter>('all');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [repoStatus, setRepoStatus] = useState<string>('pending');
   const [progressStep, setProgressStep] = useState(0);
@@ -513,20 +514,29 @@ export default function RepoPage() {
   return (
     <div className="flex flex-col h-screen bg-zinc-950">
       <div className="flex flex-1 overflow-hidden">
-        <AIAssistant
-          onAsk={handleAsk}
-          onEvidenceClick={handleEvidenceClick}
-          loading={aiLoading}
-          chatHistory={chatHistory}
-          streamingText={streamingText}
-          side
-          onboardingData={onboardingData}
-          onboardingLoading={onboardingLoading}
-          fileCount={graphData?.nodes.length}
-          repoName={repo?.name}
-          graphNodes={graphData?.nodes}
-        />
+        <div className={`${sidebarOpen ? 'flex' : 'hidden'} lg:flex shrink-0`}>
+          <AIAssistant
+            onAsk={handleAsk}
+            onEvidenceClick={handleEvidenceClick}
+            loading={aiLoading}
+            chatHistory={chatHistory}
+            streamingText={streamingText}
+            side
+            onboardingData={onboardingData}
+            onboardingLoading={onboardingLoading}
+            fileCount={graphData?.nodes.length}
+            repoName={repo?.name}
+            graphNodes={graphData?.nodes}
+          />
+        </div>
         <div className="flex-1 relative bg-zinc-900/30">
+          <button
+            onClick={() => setSidebarOpen((o) => !o)}
+            className="absolute top-3 left-3 z-10 flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white/90 border border-zinc-200 text-xs text-zinc-600 shadow-sm hover:bg-zinc-50 transition-colors backdrop-blur-sm lg:hidden"
+          >
+            <Menu className="w-3.5 h-3.5" />
+            {sidebarOpen ? 'Close' : 'Menu'}
+          </button>
           <button
             onClick={() => {
               if (onboardingData) {
@@ -537,7 +547,7 @@ export default function RepoPage() {
               }
             }}
             disabled={onboardingLoading}
-            className="absolute top-3 left-3 z-10 flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white/90 border border-zinc-200 text-xs text-zinc-600 shadow-sm hover:bg-zinc-50 disabled:opacity-50 transition-colors backdrop-blur-sm"
+            className="absolute top-3 left-20 z-10 flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white/90 border border-zinc-200 text-xs text-zinc-600 shadow-sm hover:bg-zinc-50 disabled:opacity-50 transition-colors backdrop-blur-sm"
           >
             <BookOpen className="w-3.5 h-3.5" />
             {onboardingData ? 'Close Guide' : 'New Dev Mode'}
