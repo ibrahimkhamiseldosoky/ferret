@@ -18,7 +18,7 @@ def _get_edge_weight(label: str | None) -> float:
     mapping = {
         "imports": 1.0,
         "external_dep": 0.5,
-        "contains": 0.0,
+        "contains": 0.3,
     }
     return mapping.get(label, 1.0)
 
@@ -150,9 +150,10 @@ def _layout_graph(nodes: List[GraphNode], edges: List[GraphEdge]) -> None:
     rng = random.Random(42)
     for i, node in enumerate(nodes):
         if node.position_x == 0 and node.position_y == 0:
-            cols = max(1, int(math.sqrt(len(nodes))))
-            node.position_x = (i % cols) * 100 + rng.uniform(-10, 10)
-            node.position_y = (i // cols) * 100 + rng.uniform(-10, 10)
+            cols = max(1, int(math.sqrt(len(nodes) * 1.5)))
+            spacing = 180
+            node.position_x = (i % cols) * spacing + rng.uniform(-30, 30)
+            node.position_y = (i // cols) * spacing + rng.uniform(-30, 30)
 
     node_sizes = {n.id: estimate_node_size(n.label) for n in nodes}
     node_map = {n.id: n for n in nodes}
@@ -172,9 +173,7 @@ def _layout_graph(nodes: List[GraphNode], edges: List[GraphEdge]) -> None:
     n = len(nodes)
     max_iterations = min(60, max(20, int(40 * math.log2(n + 1) / math.log2(51))))
 
-    canvas_area = 800000
-    k = math.sqrt(canvas_area / max(n, 1))
-    ideal_length = 150 + math.log2(n + 1) * 50
+    k = 100.0
 
     velocities = {node.id: (0.0, 0.0) for node in nodes}
 
@@ -193,9 +192,9 @@ def _layout_graph(nodes: List[GraphNode], edges: List[GraphEdge]) -> None:
             dist = math.hypot(dx, dy)
             if dist < 1:
                 dist = 1
-            displacement = (dist - ideal_length) * weight * 0.1
-            fx = (dx / dist) * displacement
-            fy = (dy / dist) * displacement
+            attraction = (dist * dist / k) * weight
+            fx = (dx / dist) * attraction
+            fy = (dy / dist) * attraction
             fx_src, fy_src = forces[src_id]
             fx_tgt, fy_tgt = forces[tgt_id]
             forces[src_id] = (fx_src + fx, fy_src + fy)
@@ -237,9 +236,9 @@ def _layout_graph(nodes: List[GraphNode], edges: List[GraphEdge]) -> None:
                     dx = bx - ax
                     dy = by - ay
                     dist = math.hypot(dx, dy)
-                    if dist < 1 or dist > ideal_length * 1.5:
+                    if dist < 1 or dist > k * 2.5:
                         continue
-                    spring = (dist - 80) * 0.02
+                    spring = (dist - k * 0.6) * 0.02
                     if dist < 1:
                         dist = 1
                     fx = (dx / dist) * spring
@@ -252,23 +251,28 @@ def _layout_graph(nodes: List[GraphNode], edges: List[GraphEdge]) -> None:
         for node_id in node_map:
             nx = node_map[node_id].position_x
             ny = node_map[node_id].position_y
-            f = 0.01 * n
+            f = 0.005
             fx, fy = forces[node_id]
             forces[node_id] = (fx - nx * f, fy - ny * f)
 
         damping = 0.85 - 0.25 * (iteration / max_iterations)
         total_energy = 0.0
+        max_vel = 500.0
         for node_id in node_map:
             fx, fy = forces[node_id]
+            fx = max(-1000.0, min(1000.0, fx))
+            fy = max(-1000.0, min(1000.0, fy))
             vx, vy = velocities[node_id]
             vx = (vx + fx) * damping
             vy = (vy + fy) * damping
+            vx = max(-max_vel, min(max_vel, vx))
+            vy = max(-max_vel, min(max_vel, vy))
             velocities[node_id] = (vx, vy)
             node_map[node_id].position_x += vx
             node_map[node_id].position_y += vy
             total_energy += abs(vx) + abs(vy)
 
-        for _ in range(5):
+        for _ in range(10):
             overlap_found = False
             for i_ in range(n):
                 for j_ in range(i_ + 1, n):
