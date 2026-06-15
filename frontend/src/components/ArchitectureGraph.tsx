@@ -22,6 +22,7 @@ import { computeNodeMetrics, normalizeMetric, getHeatIntensity, blendHeatColor }
 import DirectionalEdge from './DirectionalEdge';
 import DirectoryNode from './DirectoryNode';
 import { X } from 'lucide-react';
+import dagre from 'dagre';
 
 const TYPE_COLORS: Record<string, { bg: string; border: string; text: string; heat: string }> = {
   file: { bg: '#f0f9ff', border: '#38bdf8', text: '#0369a1', heat: '#0ea5e9' },
@@ -92,22 +93,43 @@ interface InnerProps {
   onToggleDir?: (dirId: string) => void;
 }
 
-function layoutNodes(nodes: GraphNode[]): GraphNode[] {
+function layoutDagreGraph(nodes: GraphNode[], edges: GraphEdge[]): GraphNode[] {
   if (nodes.length === 0) return nodes;
 
-  const hasMissing = (n: GraphNode) =>
-    n.position == null || (n.position.x === 0 && n.position.y === 0);
+  const g = new dagre.graphlib.Graph();
+  g.setDefaultEdgeLabel(() => ({}));
+  g.setGraph({
+    rankdir: 'TB',
+    nodesep: 60,
+    ranksep: 100,
+    marginx: 40,
+    marginy: 40,
+  });
 
-  const missingCount = nodes.filter(hasMissing).length;
-  if (missingCount === 0) return nodes;
+  for (const n of nodes) {
+    const width = Math.max(140, Math.min(180, n.label.length * 9 + 24));
+    g.setNode(n.node_id, { width, height: 44 });
+  }
 
-  const cols = Math.max(1, Math.ceil(Math.sqrt(nodes.length)));
-  return nodes.map((n, i) => ({
-    ...n,
-    position: hasMissing(n)
-      ? { x: (i % cols) * 280 + 40, y: Math.floor(i / cols) * 180 + 40 }
-      : n.position!,
-  }));
+  for (const e of edges) {
+    g.setEdge(e.source_id, e.target_id);
+  }
+
+  dagre.layout(g);
+
+  return nodes.map((n) => {
+    const dagreNode = g.node(n.node_id);
+    if (!dagreNode) {
+      return { ...n, position: { x: 0, y: 0 } };
+    }
+    return {
+      ...n,
+      position: {
+        x: dagreNode.x - (dagreNode.width || 140) / 2,
+        y: dagreNode.y - (dagreNode.height || 44) / 2,
+      },
+    };
+  });
 }
 
 function GraphInner({
@@ -195,7 +217,7 @@ function GraphInner({
   }, [focusedNodeId, edges]);
 
   const flowNodes = useMemo(() => {
-    const laidOut = layoutNodes(nodes);
+    const laidOut = layoutDagreGraph(nodes, edges);
     const revealCount = Math.ceil(laidOut.length * revealProgress);
     return laidOut.slice(0, revealCount).map((n) => {
       if ((n.type as string) === 'directory') {
