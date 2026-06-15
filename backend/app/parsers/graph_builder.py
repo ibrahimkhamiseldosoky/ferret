@@ -1,6 +1,26 @@
+import math
+import random
+from collections import defaultdict
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 from app.models.graph import GraphNode, GraphEdge, ArchitectureGraph
+
+
+def estimate_node_size(label: str) -> Tuple[int, int]:
+    width = max(120, min(180, len(label) * 8 + 24))
+    height = 36
+    return (width, height)
+
+
+def _get_edge_weight(label: str | None) -> float:
+    if label is None:
+        return 1.0
+    mapping = {
+        "imports": 1.0,
+        "external_dep": 0.5,
+        "contains": 0.0,
+    }
+    return mapping.get(label, 1.0)
 
 
 def _is_service_dir(path: Path, all_dirs: set[Path]) -> bool:
@@ -118,24 +138,165 @@ def build_graph(
     for node in nodes:
         node.data["importCount"] = import_counts.get(node.id, 0)
 
-    _auto_layout(nodes)
+    _layout_graph(nodes, edge_objects)
 
     return ArchitectureGraph(nodes=nodes, edges=edge_objects)
 
 
-def _auto_layout(nodes: List[GraphNode]) -> None:
-    dir_groups: dict[str, list[GraphNode]] = {}
-    for node in nodes:
-        data = node.data or {}
-        fp = data.get("filePath", "") or data.get("path", "")
-        parent = str(Path(fp).parent) if fp else ""
-        dir_groups.setdefault(parent, []).append(node)
+def _layout_graph(nodes: List[GraphNode], edges: List[GraphEdge]) -> None:
+    if not nodes:
+        return
 
-    y_offset = 0
-    for dir_path, group in dir_groups.items():
-        x_offset = 0
-        for node in group:
-            node.position_x = x_offset
-            node.position_y = y_offset
-            x_offset += 250
-        y_offset += 200
+    rng = random.Random(42)
+    for i, node in enumerate(nodes):
+        if node.position_x == 0 and node.position_y == 0:
+            cols = max(1, int(math.sqrt(len(nodes))))
+            node.position_x = (i % cols) * 100 + rng.uniform(-10, 10)
+            node.position_y = (i // cols) * 100 + rng.uniform(-10, 10)
+
+    node_sizes = {n.id: estimate_node_size(n.label) for n in nodes}
+    node_map = {n.id: n for n in nodes}
+
+    dir_groups = defaultdict(list)
+    for node in nodes:
+        fp = (node.data or {}).get("filePath", "") or (node.data or {}).get("path", "")
+        parent = str(Path(fp).parent) if fp else ""
+        dir_groups[parent].append(node.id)
+
+    edge_forces = []
+    for e in edges:
+        w = _get_edge_weight(e.label)
+        if w > 0:
+            edge_forces.append((e.source_id, e.target_id, w))
+
+    n = len(nodes)
+    max_iterations = min(60, max(20, int(40 * math.log2(n + 1) / math.log2(51))))
+
+    canvas_area = 800000
+    k = math.sqrt(canvas_area / max(n, 1))
+    ideal_length = 150 + math.log2(n + 1) * 50
+
+    velocities = {node.id: (0.0, 0.0) for node in nodes}
+
+    for iteration in range(max_iterations):
+        forces = {node.id: (0.0, 0.0) for node in nodes}
+
+        for src_id, tgt_id, weight in edge_forces:
+            if src_id not in node_map or tgt_id not in node_map:
+                continue
+            sx = node_map[src_id].position_x
+            sy = node_map[src_id].position_y
+            tx = node_map[tgt_id].position_x
+            ty = node_map[tgt_id].position_y
+            dx = tx - sx
+            dy = ty - sy
+            dist = math.hypot(dx, dy)
+            if dist < 1:
+                dist = 1
+            displacement = (dist - ideal_length) * weight * 0.1
+            fx = (dx / dist) * displacement
+            fy = (dy / dist) * displacement
+            fx_src, fy_src = forces[src_id]
+            fx_tgt, fy_tgt = forces[tgt_id]
+            forces[src_id] = (fx_src + fx, fy_src + fy)
+            forces[tgt_id] = (fx_tgt - fx, fy_tgt - fy)
+
+        node_ids = list(node_map.keys())
+        for i in range(n):
+            for j in range(i + 1, n):
+                id_a, id_b = node_ids[i], node_ids[j]
+                ax = node_map[id_a].position_x
+                ay = node_map[id_a].position_y
+                bx = node_map[id_b].position_x
+                by = node_map[id_b].position_y
+                dx = bx - ax
+                dy = by - ay
+                dist = math.hypot(dx, dy)
+                if dist < 1:
+                    dist = 1
+                rep_force = (k * k) / dist
+                fx = (dx / dist) * rep_force
+                fy = (dy / dist) * rep_force
+                fa_x, fa_y = forces[id_a]
+                fb_x, fb_y = forces[id_b]
+                forces[id_a] = (fa_x - fx, fa_y - fy)
+                forces[id_b] = (fb_x + fx, fb_y + fy)
+
+        for parent, member_ids in dir_groups.items():
+            if len(member_ids) < 2:
+                continue
+            for i in range(len(member_ids)):
+                for j in range(i + 1, len(member_ids)):
+                    id_a, id_b = member_ids[i], member_ids[j]
+                    if id_a not in node_map or id_b not in node_map:
+                        continue
+                    ax = node_map[id_a].position_x
+                    ay = node_map[id_a].position_y
+                    bx = node_map[id_b].position_x
+                    by = node_map[id_b].position_y
+                    dx = bx - ax
+                    dy = by - ay
+                    dist = math.hypot(dx, dy)
+                    if dist < 1 or dist > ideal_length * 1.5:
+                        continue
+                    spring = (dist - 80) * 0.02
+                    if dist < 1:
+                        dist = 1
+                    fx = (dx / dist) * spring
+                    fy = (dy / dist) * spring
+                    fa_x, fa_y = forces[id_a]
+                    fb_x, fb_y = forces[id_b]
+                    forces[id_a] = (fa_x + fx, fa_y + fy)
+                    forces[id_b] = (fb_x - fx, fb_y - fy)
+
+        for node_id in node_map:
+            nx = node_map[node_id].position_x
+            ny = node_map[node_id].position_y
+            f = 0.01 * n
+            fx, fy = forces[node_id]
+            forces[node_id] = (fx - nx * f, fy - ny * f)
+
+        damping = 0.85 - 0.25 * (iteration / max_iterations)
+        total_energy = 0.0
+        for node_id in node_map:
+            fx, fy = forces[node_id]
+            vx, vy = velocities[node_id]
+            vx = (vx + fx) * damping
+            vy = (vy + fy) * damping
+            velocities[node_id] = (vx, vy)
+            node_map[node_id].position_x += vx
+            node_map[node_id].position_y += vy
+            total_energy += abs(vx) + abs(vy)
+
+        for _ in range(5):
+            overlap_found = False
+            for i_ in range(n):
+                for j_ in range(i_ + 1, n):
+                    id_a, id_b = node_ids[i_], node_ids[j_]
+                    na = node_map[id_a]
+                    nb = node_map[id_b]
+                    wa, ha = node_sizes[id_a]
+                    wb, hb = node_sizes[id_b]
+                    ax, ay = na.position_x, na.position_y
+                    bx, by = nb.position_x, nb.position_y
+                    overlap_x = (wa + wb) / 2 - abs(bx - ax)
+                    overlap_y = (ha + hb) / 2 - abs(by - ay)
+                    if overlap_x > 0 and overlap_y > 0:
+                        overlap_found = True
+                        overlap_x += 8
+                        overlap_y += 8
+                        if overlap_x < overlap_y:
+                            sign = 1 if bx > ax else -1
+                            push = overlap_x / 2
+                            na.position_x -= sign * push
+                            nb.position_x += sign * push
+                        else:
+                            sign = 1 if by > ay else -1
+                            push = overlap_y / 2
+                            na.position_y -= sign * push
+                            nb.position_y += sign * push
+            if not overlap_found:
+                break
+
+        if total_energy < 0.01 * n:
+            break

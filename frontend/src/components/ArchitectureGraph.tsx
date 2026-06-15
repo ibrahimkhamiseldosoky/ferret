@@ -93,15 +93,20 @@ interface InnerProps {
 }
 
 function layoutNodes(nodes: GraphNode[]): GraphNode[] {
-  const missingPositions = nodes.some((n) => !n.position || (n.position.x === 0 && n.position.y === 0));
-  if (!missingPositions || nodes.length === 0) return nodes;
+  if (nodes.length === 0) return nodes;
 
-  const cols = 6;
+  const hasMissing = (n: GraphNode) =>
+    n.position == null || (n.position.x === 0 && n.position.y === 0);
+
+  const missingCount = nodes.filter(hasMissing).length;
+  if (missingCount === 0) return nodes;
+
+  const cols = Math.max(1, Math.ceil(Math.sqrt(nodes.length)));
   return nodes.map((n, i) => ({
     ...n,
-    position: n.position?.x != null && n.position?.y != null && (n.position.x !== 0 || n.position.y !== 0)
-      ? n.position
-      : { x: (i % cols) * 280 + 40, y: Math.floor(i / cols) * 180 + 40 },
+    position: hasMissing(n)
+      ? { x: (i % cols) * 280 + 40, y: Math.floor(i / cols) * 180 + 40 }
+      : n.position!,
   }));
 }
 
@@ -192,7 +197,7 @@ function GraphInner({
   const flowNodes = useMemo(() => {
     const laidOut = layoutNodes(nodes);
     const revealCount = Math.ceil(laidOut.length * revealProgress);
-    return laidOut.slice(0, revealCount).map((n, idx) => {
+    return laidOut.slice(0, revealCount).map((n) => {
       if ((n.type as string) === 'directory') {
         return {
           id: n.node_id,
@@ -218,7 +223,7 @@ function GraphInner({
       return {
         id: n.node_id,
         type: 'custom' as const,
-        position: n.position?.x != null ? n.position : { x: (idx % 5) * 240 + 40, y: Math.floor(idx / 5) * 160 + 40 },
+        position: n.position || { x: 0, y: 0 },
         data: {
           label: n.label,
           nodeType: n.type,
